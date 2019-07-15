@@ -1,0 +1,167 @@
+{
+  "project_info": {
+    "project_number": "242195745044",
+    "firebase_url": "https://laundrify-ba98a.firebaseio.com",
+    "project_id": "laundrify-ba98a",
+    "storage_bucket": "laundrify-ba98a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:242195745044:android:e5f4cb4e453014d8",
+        "android_client_info": {
+          "package_name": "ng.com.drycleaners"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "242195745044-h73nqn9p7f462fmhp3djgal5kqtl9gir.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ng.com.drycleaners",
+            "certificate_hash": "0ce16da17ce494aae7fd62fc7e1e326d209bd9f5"
+          }
+        },
+        {
+          "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDDTbp26Fo6-SkdArbGVyLVw5-eyQ4VQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:242195745044:android:1b2e281a90e44dd7",
+        "android_client_info": {
+          "package_name": "ng.com.laundrify.laundrify"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "242195745044-trvk4ek2cvvc4628rlt1hnjfd5ll94bv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ng.com.laundrify.laundrify",
+            "certificate_hash": "5ca5ae5d0629034f3ad65ff4904182a1e960666e"
+          }
+        },
+        {
+          "client_id": "242195745044-7nehhkhmhcqi1uervgbn12go2sn7i9jj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ng.com.laundrify.laundrify",
+            "certificate_hash": "c9768af1a82253720361c03e43a45c12b5b3cb09"
+          }
+        },
+        {
+          "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDDTbp26Fo6-SkdArbGVyLVw5-eyQ4VQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:242195745044:android:da287639801cf8b8",
+        "android_client_info": {
+          "package_name": "ng.com.laundrifyadmin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "242195745044-tj20gut0f1em6vv5th5c72tej8l7k7fn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ng.com.laundrifyadmin",
+            "certificate_hash": "0ce16da17ce494aae7fd62fc7e1e326d209bd9f5"
+          }
+        },
+        {
+          "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDDTbp26Fo6-SkdArbGVyLVw5-eyQ4VQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:242195745044:android:674a12e694872e88",
+        "android_client_info": {
+          "package_name": "ng.com.laundrifydc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "242195745044-kv1qnlm9l5ll5div08lbppvti2540hi4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ng.com.laundrifydc",
+            "certificate_hash": "0ce16da17ce494aae7fd62fc7e1e326d209bd9f5"
+          }
+        },
+        {
+          "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDDTbp26Fo6-SkdArbGVyLVw5-eyQ4VQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "242195745044-mq0g2maog24671d68sgmdgttknpu7cto.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

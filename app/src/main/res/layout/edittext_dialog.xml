@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginStart="24dp"
+        android:paddingStart="3dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="3dp"
+        android:text="₦"
+        android:textColor="@color/colorPrimary"
+        android:textSize="30sp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="fill_horizontal"
+        android:layout_marginEnd="24dp"
+        android:paddingStart="3dp"
+        android:paddingEnd="3dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/dialogEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:cursorVisible="true"
+            android:hapticFeedbackEnabled="true"
+            android:hint="Price"
+            android:inputType="number"
+            android:singleLine="true"
+            android:textColor="@color/common_google_signin_btn_text_light_focused"
+            android:textColorHint="@color/colorPrimary"
+            android:focusable="true"
+            android:focusableInTouchMode="true"/>
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+</LinearLayout>
