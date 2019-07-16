@@ -46,7 +46,7 @@ public class Tab2Frag extends Fragment {
     TextView descText;
     RecyclerView collectedRV;
     ProgressBar pBar;
-    ArrayList<TwoStringsModel> currentDays;
+    String lastDayKey;
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
@@ -61,6 +61,7 @@ public class Tab2Frag extends Fragment {
         collectedModels = new ArrayList<>();
         collectedRV.setAdapter(collectedAdapter);
         pBar = v.findViewById(R.id.progressBar);
+        lastDayKey = null;
         return v;
     }
 
@@ -103,7 +104,7 @@ public class Tab2Frag extends Fragment {
 
     private void feedData() {
 
-        //Get Last 7 days Key + today
+        //Get Last 7 days Keys + today
         ArrayList<TwoStringsModel> twoStringsModels = new ArrayList<>();
         for (int i = 0; i > -8; i--) {
             Date date;
@@ -153,6 +154,9 @@ public class Tab2Frag extends Fragment {
                     collectedAdapter.notifyDataSetChanged();
                     pBar.setVisibility(View.GONE);
                     collectedRV.setVisibility(View.VISIBLE);
+                    if (dayKey == lastDayKey) {
+                        cleanDB(lastDayKey);
+                    }
                 }
 
                 @Override
@@ -161,21 +165,45 @@ public class Tab2Frag extends Fragment {
             });
             
             if (i == -7) {
-                deleteKeysLessthan(dayKey);
+                lastDayKey = dayKey;
                 //Log.i("test", "deleting...");
             }
         }
     }
 
-    private void deleteKeysLessthan (String lastDate) {
+    private void cleanDB (final String lastDate) {
         dcDB.child("Orders").child("Collected").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                for (DataSnapshot childKey : dataSnapshot.getChildren()) {
-                    Log.i("test","Found " + childKey.getKey());
+                for (final DataSnapshot day : dataSnapshot.getChildren()) {
+                    //Log.i("test","Found " + child.getKey());
+                    if (Integer.parseInt(day.getKey()) < Integer.parseInt(lastDate)) {
+                        //Log.i("test", "moving... " + child.getKey());
+                        for (final DataSnapshot orders : day.getChildren()) {
+                            dcDB.child("Orders").child("Incomplete").child(orders.getKey()).setValue(orders.getValue(), new DatabaseReference.CompletionListener() {
+                                @Override
+                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                                    dcDB.child("Orders").child("Collected").child(day.getKey()).child(orders.getKey()).removeValue();
+                                }
+                            });
+
+                        }
+                    }
                 }
             }
 
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void moveOrders(String orderKey, Object value) {
+        orderDB.child(orderKey).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+            }
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
 

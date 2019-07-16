@@ -56,4 +56,5 @@ dependencies {
 //    implementation 'com.google.firebase:firebase-ads:17.2.1'
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
     implementation 'androidx.cardview:cardview:1.0.0'
+    androidTestImplementation 'junit:junit:4.12'
 }

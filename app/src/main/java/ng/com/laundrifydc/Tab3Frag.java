@@ -4,6 +4,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
@@ -31,6 +33,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import static ng.com.laundrifydc.MainActivity.dcDB;
 import static ng.com.laundrifydc.MainActivity.mainRef;
 import static ng.com.laundrifydc.MainActivity.mainSnap;
 import static ng.com.laundrifydc.MainActivity.orderDB;
@@ -42,6 +45,8 @@ public class Tab3Frag extends Fragment {
     TextView descText;
     RecyclerView deliveryRV;
     ProgressBar pBar;
+    private String firstDayKey;
+    private String lastDayKey;
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
@@ -56,6 +61,8 @@ public class Tab3Frag extends Fragment {
         deliveryAdapter = new Tab3Frag.Delivery_Adapter();
         deliveryModels = new ArrayList<>();
         deliveryRV.setAdapter(deliveryAdapter);
+        firstDayKey = null;
+        lastDayKey = null;
         return v;
     }
 
@@ -66,8 +73,6 @@ public class Tab3Frag extends Fragment {
             getSnapAgain();
         } else if (deliveryModels.size() == 0) {
             feedData();
-        } else {
-
         }
     }
 
@@ -97,44 +102,42 @@ public class Tab3Frag extends Fragment {
     }
 
     private void feedData() {
-        for (int i = 0; i <= 7; i++) {
+        //Get Next 7 days Keys + today
+        for (int i = 0; i < 8; i++) {
             Date date;
             Calendar cal = Calendar.getInstance();
             cal.add(Calendar.DAY_OF_YEAR, i);
             date = cal.getTime();
 
-            //Add tab !!!
-            String dayDate = new SimpleDateFormat("EEEE dd").format(date);
+            final String dayKey = new SimpleDateFormat("yyyyMMdd").format(date);
+            final String dayDay = new SimpleDateFormat("EEEE").format(date);
             final String dayMonth = new SimpleDateFormat("MMMM").format(date);
-            final String dataDay = new SimpleDateFormat("yyyyMMdd").format(date);
+            String dayNumber = (new SimpleDateFormat("dd").format(date));
             String addition;
-            String number = new SimpleDateFormat("dd").format(date);
+            final String dayString;
 
-            if (number.matches("01")) {
+            if (dayNumber.matches("01")) {
                 addition = "st ";
-            } else if (number.matches("01")) {
+            } else if (dayNumber.matches("02")) {
                 addition = "nd ";
-            } else if (number.matches("01")) {
+            } else if (dayNumber.matches("03")) {
                 addition = "rd ";
             } else {
                 addition = "th ";
             }
 
-            if (number.substring(0,1).matches("0")) {
-                number = number.substring(1);
+            if (dayNumber.substring(0, 1).matches("0")) {
+                dayNumber = dayNumber.substring(1);
             }
             if (i == 0) {
-                dayDate = "Today " + "(" + String.valueOf(number) + addition + dayMonth + ")" ;
-            } else if (i == 1) {
-                dayDate = "Tomorrow " + "(" + String.valueOf(number) + addition + dayMonth + ")" ;
+                dayString = "Today " + "(" + dayNumber + addition + dayMonth + ")";
+            } else if (i == -1) {
+                dayString = "Yesterday " + "(" + dayNumber + addition + dayMonth + ")";
             } else {
-                dayDate = dayDate + addition + dayMonth;
+                dayString = dayDay + " " + dayNumber + addition + dayMonth;
             }
 
-            //Active orders are neither collected nor pending deliveries
-            final DatabaseReference dateRef  = mainRef.child("Users").child("DryCleaners").child("0rYxL9Vp5yM3NrKs0upy0xz4S0D3")
-                    .child("PendingDeliveries").child(dataDay);
-            final String finalDayDate = dayDate;
+            final Query dateRef = dcDB.child("Orders").child("Delivery").child(dayKey).orderByChild("TimeStamp");
             dateRef.addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -143,11 +146,14 @@ public class Tab3Frag extends Fragment {
                     for (DataSnapshot child : dataSnapshot.getChildren()) {
                         keys.add(child.getKey());
                     }
-                    deliveryModels.add(new Collected_Model(finalDayDate, count, keys, dataDay));
+                    deliveryModels.add(new Collected_Model(dayString, count, keys, dayKey));
                     deliveryAdapter.notifyDataSetChanged();
                     pBar.setVisibility(View.GONE);
                     deliveryRV.setVisibility(View.VISIBLE);
                     //Log.i("test", "No orders for " + dataSnapshot.toString());
+                    if (dayKey == lastDayKey) {
+                        cleanDB(firstDayKey);
+                    }
                 }
 
                 @Override
@@ -155,9 +161,43 @@ public class Tab3Frag extends Fragment {
                 }
             });
 
+            if (i == 0) {
+                firstDayKey = dayKey;
+            }
+            if (i == 7) {
+                lastDayKey = dayKey;
+            }
         }
     }
 
+    private void cleanDB (final String firstDayKey) {
+        dcDB.child("Orders").child("Delivery").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                for (final DataSnapshot day : dataSnapshot.getChildren()) {
+                    //Log.i("test","Found " + day.getKey());
+                    if (Integer.parseInt(day.getKey()) < Integer.parseInt(firstDayKey)) {
+                        //Log.i("test", "moving... " + day.getKey());
+                        for (final DataSnapshot orders : day.getChildren()) {
+                            dcDB.child("Orders").child("Incomplete").child(orders.getKey()).setValue(orders.getValue(), new DatabaseReference.CompletionListener() {
+                                @Override
+                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                                    dcDB.child("Orders").child("Delivery").child(day.getKey()).child(orders.getKey()).removeValue();
+                                }
+                            });
+
+                        }
+
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+    }
 
     public class Delivery_Adapter extends RecyclerView.Adapter<Tab3Frag.Delivery_Adapter.MyViewHolder> {
 
