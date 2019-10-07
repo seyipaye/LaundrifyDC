@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="ng.com.laundrifydc">
 
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
     <application
@@ -13,11 +13,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".LoginActivity"
+            android:theme="@style/OrangeScreenTheme"/>
+        <activity android:name=".SignupActivity"
+            android:theme="@style/OrangeScreenTheme"/>
+        <activity android:name=".LoginorsignupActivity"
+            android:theme="@style/OrangeScreenTheme"/>
 
         <service
             android:name=".AwsomeNotification"
-            android:exported="false">
-        </service>
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"
@@ -29,7 +34,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
     </application>
 
 </manifest>

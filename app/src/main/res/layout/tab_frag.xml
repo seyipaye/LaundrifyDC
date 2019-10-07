@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -12,7 +13,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:visibility="gone">
+        android:visibility="gone"
+        tools:listitem="@layout/pending_row"
+        tools:visibility="visible">
 
     </androidx.recyclerview.widget.RecyclerView>
 
@@ -40,6 +43,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_weight="1"
         android:indeterminateTint="@color/colorPrimary"
+        android:paddingTop="200dp"
         android:visibility="visible"
-        android:paddingTop="200dp"/>
+        tools:visibility="gone" />
 </LinearLayout>

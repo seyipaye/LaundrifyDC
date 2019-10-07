@@ -6,7 +6,8 @@
     <string name="channel_description">This allows you to customise the "Laundrify(DC) app is running" notification</string>
     <string name="notification_title">Laundrify(DC) is running</string>
     <string name="notification_message">Your phone is online for Orders</string>
-    <string name="ticker_text">Laundrfy(DC) started running</string>
+    <string name="ticker_text">Laundrfy(DC) stopped running</string>
     <string name="todayText">No order for today yet &#128564;</string>
+    <string name="pickup_delivery_man"><![CDATA[Name of pickup & delivery Man]]></string>
 
 </resources>

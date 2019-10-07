@@ -3,11 +3,14 @@ package ng.com.laundrifydc;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.tabs.TabLayout;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.onesignal.OneSignal;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,9 +21,11 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -32,68 +37,160 @@ import android.view.View;
 
 import android.widget.Toast;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private SectionsPagerAdapter mSectionsPagerAdapter;
     private ViewPager mViewPager;
-
     private FirebaseDatabase database;
     static DatabaseReference mainRef;
-    static DataSnapshot mainSnap;
-    static DatabaseReference orderDB;
+    static DataSnapshot dcOrdersSnap;
+    static DatabaseReference ordersRef;
     static DatabaseReference dcDB;
+    static boolean coRefreshed;
+    static boolean deRefreshed;
+    private FirebaseUser user;
+    private FirebaseAuth mAuth;
     TabLayout tabLayout;
     static boolean gettingSnap;
-
-
+    static List<Collected_Model> collectedModels;
+    static List<Collected_Model> deliveryModels;
+    List<Fragment> tabFragments;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        updated();
-        mainSnap = null;
-        showProgressDialog("Please wait...", "Fetching Data", (long) 30000);
-    }
 
-    private void updated() {
         database = FirebaseDatabase.getInstance();
         mainRef = database.getReference();
-        dcDB = mainRef.child("Users").child("DryCleaners").child("0rYxL9Vp5yM3NrKs0upy0xz4S0D3");
-        mainRef.child("AppsVersion").child("Android").child("LaundrifyDC")
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                hideProgressDialog();
-            if (web_update(dataSnapshot.getValue().toString())) {
-                rateThisApplication(MainActivity.this);
-                Toast.makeText(MainActivity.this, "Please update the app", Toast.LENGTH_LONG).show();
-            } else {
-                launchactivity();
-            }
-        }
-        @Override
-        public void onCancelled(@NonNull DatabaseError databaseError) {
-            Toast.makeText(MainActivity.this, "Please check internet connection", Toast.LENGTH_LONG).show();
-        }
-    });
+        mAuth = FirebaseAuth.getInstance();
+        dcOrdersSnap = null;
+        checkUpdate();
     }
 
+    //Update Checker
+    private void checkUpdate() {
+        showProgressDialog("Please wait...", "Starting up...", (long) 60000);
+        mainRef.child("AppsVersion").child("Android").child("LaundrifyDC")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        hideProgressDialog();
+                        if (compareVersions(dataSnapshot.getValue().toString())) {
+                            askToUpdate();
+                        } else {
+                            checkLogin();
+                        }
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        Toast.makeText(MainActivity.this, "Please check internet connection", Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+    private void askToUpdate() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this, R.style.IncompleteDialog);
+        builder.setIcon(android.R.drawable.ic_dialog_alert);
+        builder.setTitle("Out dated app");
+        builder.setMessage("Our developers are working to ensure you get the best of our services, and we've got a new update all in place for you" +
+                " we're sorry but it's necessary to update before continuation")
+                .setPositiveButton("Update", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        update(MainActivity.this);
+                    }})
+                .setNegativeButton("Later", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        finish();
+                    }});
+
+        final AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+    public void update(Context context) {
+        Uri uri = Uri.parse("market://details?id=" + context.getPackageName());
+        Intent goToMarket = new Intent(Intent.ACTION_VIEW, uri);
+        // To count with Play market backstack, After pressing back button,
+        // to taken back to our application, we need to add following flags to intent.
+
+        goToMarket.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
+                Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+        try {
+            context.startActivity(goToMarket);
+        } catch (ActivityNotFoundException e) {
+            context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps/details?id=" + context.getPackageName())));
+        } finally {
+            uri = null;
+            goToMarket = null;
+        }
+    }
+    private boolean compareVersions(String freshVersion){
+        try {
+            String curVersion = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            //Log.i("Stuff", getPackageName() + freshVersion + curVersion);
+            return value(curVersion) < value(freshVersion);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+    }
+    private long value(String string) {
+        string = string.trim();
+        if( string.contains( "." )){
+            final int index = string.lastIndexOf( "." );
+            return value( string.substring( 0, index ))* 100 + value( string.substring( index + 1 ));
+        }
+        else {
+            return Long.valueOf( string );
+        }
+    }
+
+
+    private void checkLogin() {
+        user = mAuth.getCurrentUser();
+        if (user != null) {
+            launchactivity();
+        } else {
+            Intent intent = new Intent(getApplicationContext(), LoginorsignupActivity.class);
+            startActivity(intent);
+            finish();
+        }
+    }
+
+    //Launch activity
     private void launchactivity() {
+        showProgressDialog("", "Geting data...", (long) 60000);
+        dcDB = mainRef.child("Users").child("DryCleaners").child(user.getUid());
+
+        getSnap();
+
         // OneSignal Initialization
-        /*
-        OneSignal.startInit(this)
+        OneSignal.startInit(MainActivity.this)
                 .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
                 .unsubscribeWhenNotificationsAreDisabled(true)
                 .init();
-                */
-        getSnap();
+        OneSignal.setEmail(user.getEmail());
+        OneSignal.idsAvailable(new OneSignal.IdsAvailableHandler() {
+            @Override
+            public void idsAvailable(String userId, String registrationId) {
+                dcDB.child("Info").child("NotificationKey").setValue(userId);
+                Log.i("test", "Id Available");
+            }
+        });
         startService(new Intent(this, AwsomeNotification.class));
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        //stopService(new Intent(this, AwsomeNotification.class));
+
+        tabFragments = new ArrayList<>();
+        tabFragments.add(new Tab1Frag());
+        tabFragments.add(new Tab2Frag());
+        tabFragments.add(new Tab3Frag());
+        tabFragments.add(new Tab4Frag());
+;        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
@@ -107,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
         tabLayout.addOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(mViewPager));
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -117,87 +214,17 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //Update Checker
-    public void rateThisApplication(Context context) {
-        Uri uri = Uri.parse("market://details?id=" + context.getPackageName());
-        Intent goToMarket = new Intent(Intent.ACTION_VIEW, uri);
-        // To count with Play market backstack, After pressing back button,
-        // to taken back to our application, we need to add following flags to intent.
-        goToMarket.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
-                Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-        try
-        {
-            context.startActivity(goToMarket);
-        }
-        catch (ActivityNotFoundException e)
-        {
-            context.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps/details?id=" + context.getPackageName())));
-        }
-        finally
-        {
-            uri = null;
-            goToMarket = null;
-        }
-    }
-    private long value(String string) {
-        string = string.trim();
-        if( string.contains( "." )){
-            final int index = string.lastIndexOf( "." );
-            return value( string.substring( 0, index ))* 100 + value( string.substring( index + 1 ));
-        }
-        else {
-            return Long.valueOf( string );
-        }
-    }
-    private boolean web_update(String newVersion){
-        try {
-            String curVersion = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;;
-            Log.i("Stuff", getPackageName() + newVersion + curVersion);
-            return value(curVersion) < value(newVersion);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-
-    }
-
-    private void feedData() {
-        for (int i = 1; i<=7; i++) {
-            //DD_Models = new ArrayList<>();
-            Date date;
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_YEAR, i);
-            date = cal.getTime();
-
-            //Add tab !!!
-            String dayDate = new SimpleDateFormat("EEEE dd").format(date);
-            String addition;
-            int number = Integer.valueOf(new SimpleDateFormat("dd").format(date));
-            if (number == 01) {
-                addition = "st";
-            } else if (number == 02) {
-                addition = "nd";
-            } else if (number == 03) {
-                addition = "rd";
-            } else {
-                addition = "th";
-            }
-        }
-
-
-    }
-
     private void getSnap() {
         showProgressDialog("Please wait...", "Fetching data...", (long) 30000);
         gettingSnap = true;
-        orderDB = mainRef.child("Orders");
-        orderDB.addListenerForSingleValueEvent(new ValueEventListener() {
+        dcDB.child("Orders").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    mainSnap = dataSnapshot;
-                    //feedData();
+                    dcOrdersSnap = dataSnapshot;
                     Toast.makeText(MainActivity.this, "Data fetched", Toast.LENGTH_SHORT).show();
+                    coRefreshed = true;
+                    deRefreshed = true;
                     hideProgressDialog();
                     gettingSnap = false;
                 }
@@ -242,23 +269,13 @@ public class MainActivity extends AppCompatActivity {
         public Fragment getItem (int position) {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
-            switch (position) {
-                case 0:
-                    return new Tab1Frag();
-                case 1:
-                    return new Tab2Frag();
-                case 2:
-                    return new Tab3Frag();
-                case 3:
-                    return new Tab4Frag();
-            }
-            return null;
+            return tabFragments.get(position);
         }
 
         @Override
         public int getCount() {
             // Show total pages.
-            return 4;
+            return tabFragments.size();
         }
     }
 

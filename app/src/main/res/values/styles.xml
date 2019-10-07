@@ -39,12 +39,32 @@
         <item name="android:windowExitAnimation">@anim/sliding_out_left</item>
     </style>
 
-    <style name="ProgressStyle">
-        <item name="android:windowExitAnimation">@anim/sliding_out_left</item>
+    <style name="IncompleteFullDialog" parent="FullscreenDialogTheme">
+        <item name="android:windowAnimationStyle">@style/IncompleteFullAnimation</item>
+    </style>
+
+    <style name="IncompleteFullAnimation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_down</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_down</item>
+    </style>
+
+    <style name="IncompleteDialog" parent="DialogStyle">
+        <item name="android:windowAnimationStyle">@style/IncompleteDialogAnimation</item>
+    </style>
+
+    <style name="IncompleteDialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_down</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_up</item>
     </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <!--Style for Main Screen-->
+    <style name="OrangeScreenTheme" parent="AppTheme">
+        <item name="android:windowBackground">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorPrimary</item>
+    </style>
 
 </resources>

@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cardView2"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="4dp"
+    app:cardPreventCornerOverlap="false"
+    app:cardUseCompatPadding="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp">
+
+            <ImageView
+                android:id="@+id/orderDp"
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:layout_marginTop="8dp"
+                android:padding="8dp"
+                android:scaleType="centerCrop"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/orderName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="20dp"
+                android:fontFamily="@font/roboto_slab"
+                android:singleLine="true"
+                android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                android:textSize="15sp"
+                app:layout_constraintStart_toEndOf="@id/orderDp"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Ipaye Oluwaseyifunmi" />
+
+            <TextView
+                android:id="@+id/orderID"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:singleLine="true"
+                android:textColor="@color/colorPrimary"
+                android:textSize="15sp"
+                app:layout_constraintBaseline_toBaselineOf="@id/orderName"
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:text="ID: LcXCTPst" />
+
+            <TextView
+                android:id="@+id/details"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="24dp"
+                android:singleLine="true"
+                android:textSize="16sp"
+                app:layout_constraintStart_toEndOf="@id/orderDp"
+                app:layout_constraintTop_toTopOf="@id/orderName"
+                tools:text="Fragranced Laundry | Bus Pickup" />
+
+            <TextView
+                android:id="@+id/weeklyPickupT"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/red_solid"
+                android:paddingStart="5dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="5dp"
+                android:paddingBottom="3dp"
+                tools:text="Weekly pickup"
+                android:textColor="@color/colorAccent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/details" />
+
+            <TextView
+                android:id="@+id/textView10"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:drawableStart="@drawable/ic_home_black_24dp"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="Collection details"
+                android:textColor="@color/colorPrimary"
+                android:textSize="14sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/orderDp" />
+
+            <TextView
+                android:id="@+id/orderCoTime"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="8dp"
+                android:singleLine="true"
+                android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textView10"
+                tools:text="Time: Wednesday 03 Apr, 2019 | 20:00 " />
+
+            <TextView
+                android:id="@+id/orderCoAdd"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="8dp"
+                android:singleLine="true"
+                android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/orderCoTime"
+                tools:text="Address: 45, amoo street Orile - Agege, Lagos." />
+
+            <TextView
+                android:id="@+id/textView11"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:drawableStart="@drawable/ic_home_black_24dp"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="Delivery details"
+                android:textColor="@color/colorPrimary"
+                android:textSize="14sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/orderCoAdd" />
+
+            <TextView
+                android:id="@+id/orderDeTime"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="8dp"
+                android:singleLine="true"
+                android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textView11"
+                tools:text="Time: Monday 1st March | 20:00 " />
+
+            <TextView
+                android:id="@+id/orderDeAdd"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="8dp"
+                android:singleLine="true"
+                android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/orderDeTime"
+                tools:text="Address: 45, amoo street Orile - Agege, Lagos."/>
+
+            <TextView
+                android:id="@+id/payment"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:drawableStart="@drawable/ic_monetization_on_black_24dp"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="Payment"
+                android:textColor="@color/colorPrimary"
+                android:textSize="14sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/orderDeAdd" />
+
+            <LinearLayout
+                android:id="@+id/paymentLinear"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+
+                app:layout_constraintTop_toBottomOf="@+id/payment"
+                tools:layout_editor_absoluteX="21dp">
+
+                <Button
+                    android:id="@+id/priceText"
+                    style="@android:style/Widget.Holo.Button.Borderless.Small"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textAlignment="center"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="30sp"
+                    tools:text="₦2000" />
+
+                <View
+                    android:id="@+id/divider3"
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="?android:attr/listDivider" />
+
+                <TextView
+                    android:id="@+id/notPaidText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:paddingStart="8dp"
+                    android:text="Not yet paid"
+                    android:textSize="12sp" />
+
+                <Switch
+                    android:id="@+id/payswitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center_vertical"
+                    android:checked="false"
+                    android:textOff="false"
+                    android:textOn="true" />
+
+                <TextView
+                    android:id="@+id/paidText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:paddingEnd="8dp"
+                    android:text="Paid"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/pNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:gravity="center"
+                android:singleLine="true"
+                android:textColor="@color/colorPrimary"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/paymentLinear"
+                tools:text="Phone no. : 08012345678" />
+
+            <LinearLayout
+                android:id="@+id/linearLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/red_ring"
+                android:divider="@drawable/red_line"
+                android:orientation="horizontal"
+                android:showDividers="middle"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/pNumber"
+                tools:layout_editor_absoluteX="5dp">
+
+
+                <Button
+                    android:id="@+id/startButton"
+                    style="@android:style/Widget.DeviceDefault.Button.Borderless"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:drawableEnd="@drawable/ic_transfer_within_a_station_black_24dp"
+                    android:singleLine="true"
+                    android:text="Start delivery" />
+
+                <Button
+                    android:id="@+id/callButton"
+                    style="@android:style/Widget.DeviceDefault.Button.Borderless"
+                            android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:drawableEnd="@drawable/ic_call_black_24dp"
+                    android:singleLine="true"
+                    android:text="Call" />
+            </LinearLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>

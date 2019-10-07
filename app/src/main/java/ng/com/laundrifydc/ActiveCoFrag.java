@@ -1,8 +1,14 @@
 package ng.com.laundrifydc;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.SpannableString;
@@ -24,9 +30,11 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -37,12 +45,16 @@ import java.util.Map;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import static ng.com.laundrifydc.MainActivity.dcDB;
+import static ng.com.laundrifydc.MainActivity.dcOrdersSnap;
+import static ng.com.laundrifydc.MainActivity.gettingSnap;
 import static ng.com.laundrifydc.MainActivity.mainRef;
+import static ng.com.laundrifydc.MainActivity.ordersRef;
 
 
 public class ActiveCoFrag extends DialogFragment {
@@ -63,10 +75,9 @@ public class ActiveCoFrag extends DialogFragment {
         setStyle(DialogFragment.STYLE_NORMAL, R.style.FullscreenDialogTheme);
     }
 
-    static ActiveCoFrag newInstance(ArrayList<String> data, String dataDay) {
+    static ActiveCoFrag newInstance(ArrayList<String> data, String dataDay, String total) {
         coKeys = data;
         coDataDay = dataDay;
-
         return new ActiveCoFrag();
     }
 
@@ -104,55 +115,23 @@ public class ActiveCoFrag extends DialogFragment {
         }
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-
-    }
-
     private void getOrders() {
-        /*
-        Map userInfo = new HashMap();
-        userInfo.put("CollectionTime", "Wednesday 08 May, 2019 | 04:30 PM");
-        userInfo.put("DeliveryTime", "Sunday 12 May, 2019 | 04:30 PM");
-        userInfo.put("Fragrance", true);
-        userInfo.put("HavePaid", false);
-        userInfo.put("LastName", "Majekodunmi");
-        userInfo.put("Locality", "Agege");
-        userInfo.put("Note", "");
-        userInfo.put("PhoneNumber", "08156655622");
-        userInfo.put("Address", "47, amoo street, Agege, Lagos.");
-        userInfo.put("Price", 0);
-        userInfo.put("Progress", 2);
-        userInfo.put("Quickwash", false);
-        userInfo.put("State", "Lagos");
-        userInfo.put("UserID", "hlz9jW4v53gz71Oku7m9JmlvgdH3");
-        userInfo.put("Vehicle", "Wolejeje");
-        userInfo.put("WeeklyPickup", false);
-
-        mainRef.child("Orders").child("Active").child("aLcTEkqHI").setValue(userInfo, new DatabaseReference.CompletionListener() {
-            @Override
-            public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
-                Toast.makeText(context, "Uploaded it up", Toast.LENGTH_SHORT).show();
-                getit();
-            }
-        });
-        */
-
         for (Iterator<String> it = coKeys.iterator(); it.hasNext(); ) {
-            String thisKey = it.next();
-            //Log.i("test", thisKey);
+            final String thisKey = it.next();
+            Log.i("test", thisKey);
             mainRef.child("Orders").child(thisKey)
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                             if (dataSnapshot.hasChildren()) {
-                                //Log.i("test", "1 Order yay");
+                                Log.i("test", "1 Order yay");
                                 final Map dataMap = (Map<String, Object>) dataSnapshot.getValue();
                                 final String newKey = dataSnapshot.getKey();
                                 convertNadd(dataMap, newKey);
                             } else {
-                                //Log.i("test", "No Order");
+                                Log.i("test", "No Order");
+                                dcDB.child("Orders").child("Collected").child(coDataDay).child(thisKey).removeValue();
+                                refreshDB();
                             }
                         }
 
@@ -165,34 +144,40 @@ public class ActiveCoFrag extends DialogFragment {
     }
 
     private void convertNadd(Map dataMap, String id) {
-        if (chgS(dataMap.get("CollectionStamp")).substring(0, 8).matches(coDataDay)) {
-            String details;
-            if (String.valueOf(dataMap.get("Fragrance")).matches("true")) {
-                details = "Fragranced Laundry | " + String.valueOf(dataMap.get("Vehicle")) + " Pickup";
+
+            //Collection date matches
+            if (chgS(dataMap.get("CollectionStamp")).substring(0, 8).matches(coDataDay)) {
+                String details;
+                if (String.valueOf(dataMap.get("Fragrance")).matches("true")) {
+                    details = "Fragranced Laundry | " + (dataMap.get("Vehicle")) + " Pickup";
+                } else {
+                    details = "No Fragrance needed | " + (dataMap.get("Vehicle")) + " Pickup";
+                }
+                String name = (dataMap.get("FirstName")) + " " + (dataMap.get("LastName"));
+
+
+                active_models.add(new Active_Model(id, chgS(dataMap.get("UserID")), name, chgB(dataMap.get("WeeklyPickup")), details, chgS(dataMap.get("CollectionTime")),
+                        chgS(dataMap.get("PickupAddress")), chgS(dataMap.get("DeliveryTime")), chgS(dataMap.get("PickupAddress")), chgS(dataMap.get("Note")), chgI(dataMap.get("Price")), chgB(dataMap.get("HavePaid")),
+                        chgS(dataMap.get("PhoneNumber")), chgI(dataMap.get("Progress"))));
+
+                activeCoAdapter.notifyDataSetChanged();
+
+                Log.i("test", "Converted first " + id);
+
+                hideProgressDialog();
+                activeCoRV.setVisibility(View.VISIBLE);
+                pBar.setVisibility(View.GONE);
             } else {
-                details = "No Fragrance needed | " + String.valueOf(dataMap.get("Vehicle")) + " Pickup";
+
+                //Collection date dosen't matches
+                dcDB.child("Orders").child("Collected").child(coDataDay).child(id).removeValue();
+                refreshDB();
             }
-            String name = String.valueOf(dataMap.
-                    get("FirstName")) + " " + String.valueOf(dataMap.get("LastName"));
-
-
-            active_models.add(new Active_Model(id, chgS(dataMap.get("UserID")), name, chgB(dataMap.get("WeeklyPickup")), details, chgS(dataMap.get("CollectionTime")),
-                    chgS(dataMap.get("PickupAddress")), chgS(dataMap.get("DeliveryTime")), chgS(dataMap.get("PickupAddress")), chgS(dataMap.get("Note")), chgI(dataMap.get("Price")), chgB(dataMap.get("HavePaid")),
-                    chgS(dataMap.get("PhoneNumber")), chgI(dataMap.get("Progress"))));
-
-            activeCoAdapter.notifyDataSetChanged();
-
-            Log.i("test", "Converted !!!");
-
-            hideProgressDialog();
-            activeCoRV.setVisibility(View.VISIBLE);
-            pBar.setVisibility(View.GONE);
-        } else {
-            dcDB.child("Orders").child("Collected").child(coDataDay).child(id).removeValue();
-        }
 
         if ((chgI(dataMap.get("Progress")) == 4)) {
-            dcDB.child("Orders").child("Incomplete").child(id).child("TimeStamp").setValue(chgS(dataMap.get("DeliveryStamp")));
+
+            // Waiting for confirmation
+            Snackbar.make(activeCoRV, "Some orders need payment confirmation", Snackbar.LENGTH_SHORT);
         }
     }
 
@@ -204,6 +189,32 @@ public class ActiveCoFrag extends DialogFragment {
     }
     private int chgI(Object obj) {
         return Integer.valueOf(String.valueOf(obj));
+    }
+
+    //Get snap again from database
+    private void refreshDB() {
+        gettingSnap = true;
+        showProgressDialog("", "Refreshing data...", (long) 50000);
+        if (ordersRef == null) {
+            ordersRef = FirebaseDatabase.getInstance().getReference().child("Orders");
+        }
+        dcDB.child("Orders").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    gettingSnap = false;
+                    dcOrdersSnap = dataSnapshot;
+                    MainActivity.coRefreshed = true;
+                    MainActivity.deRefreshed = true;
+                    hideProgressDialog();
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                hideProgressDialog();
+                Toast.makeText(context, "Couldn't fetch data", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     public class ActiveCo_Adapter extends RecyclerView.Adapter<ActiveCo_Adapter.MyViewHolder> {
@@ -295,14 +306,12 @@ public class ActiveCoFrag extends DialogFragment {
             final String isFragranced = active_models.get(position).getDeAdd();
 
             //Reset flexible things to default
-
-
             orderDp.setImageResource(R.drawable.ic_contacts_black_24dp);
             orderName.setText(orderNameT);
             orderID.setText(order_ID);
 
             // Show Details
-
+            details.setText(active_models.get(position).getDetails());
 
             // Show Weekly pickup floater
             if (isWeekly) {
@@ -311,10 +320,10 @@ public class ActiveCoFrag extends DialogFragment {
                 weeklyPickupT.setVisibility(View.GONE);
             }
 
-            orderCoTime.setText(active_models.get(position).getCoTime());
-            orderCoAdd.setText(active_models.get(position).getCoAdd());
-            orderDeTime.setText(active_models.get(position).getDeTime());
-            orderDeAdd.setText(deAdd);
+            orderCoTime.setText("Time: " + active_models.get(position).getCoTime());
+            orderCoAdd.setText("Date: " + active_models.get(position).getCoAdd());
+            orderDeTime.setText("Time: " + active_models.get(position).getDeTime());
+            orderDeAdd.setText("Date: " + deAdd);
 
             // Assign Note
             if (noteT.matches("")) {
@@ -355,7 +364,7 @@ public class ActiveCoFrag extends DialogFragment {
                         @Override
                         public void onClick(View v) {
                             changeIfPaid("Confirm payment", "Are you sure " + orderNameT + " has paid ?", "HavePaid",
-                                    paySwitch, order_ID, "true", position, startButton);
+                                    paySwitch, order_ID, "true", position);
                         }
                     });
                 }
@@ -372,6 +381,7 @@ public class ActiveCoFrag extends DialogFragment {
                     }
                 });
             } else {
+
                 // config. switch
                 paySwitch.setChecked(false);
                 paySwitch.setOnClickListener(new View.OnClickListener() {
@@ -388,14 +398,14 @@ public class ActiveCoFrag extends DialogFragment {
                 priceText.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        inputPrice(order_ID);
+                        inputPrice(order_ID, position);
                     }
                 });
             }
 
             pNumber.setText("Phone no.: " + active_models.get(position).getpNumber());
 
-            //Call Button
+            // Call Button
             callButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -403,8 +413,19 @@ public class ActiveCoFrag extends DialogFragment {
                 }
             });
 
-            //Confirm Button
-            if (active_models.get(position).getProgress() == 2) {
+            if (active_models.get(position).getProgress() >= 3) {
+
+                // Confirm the delivery
+                startButton.setText("Confirm Delivery");
+                startButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        confirmDelivery(position, order_ID);
+                    }
+                });
+            } else {
+
+                // Start Delivery
                 startButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -415,93 +436,85 @@ public class ActiveCoFrag extends DialogFragment {
                         }
                     }
                 });
-            } else {
-                startButton.setText("Start Delivery");
-                startButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                            moveToHistory(position);
-                    }
-                });
             }
 
             Log.i("test", String.valueOf(coKeys));
         }
 
-        private void moveToHistory(final int position) {
+        private void confirmDelivery(final int position, String order_ID) {
             if (active_models.get(position).isPayed()) {
-                Toast.makeText(context, "Storing to History", Toast.LENGTH_SHORT).show();
 
-                //Get Order Snapshot
-                mainRef.child("Orders").child("Active").child(active_models.get(position).getOrderID())
-                        .addListenerForSingleValueEvent(new ValueEventListener() {
-                            @Override
-                            public void onDataChange(@NonNull final DataSnapshot dataSnapshot) {
+                showProgressDialog("Please wait", "Confirming delivering...", (long) 60000);
+                if (active_models.get(position).getProgress() == 4){
 
-                                //Put snapshot in delivery history
-                                mainRef.child("History").child(dataSnapshot
-                                        .child("DeliveryStamp").getValue().toString().substring(0,8)).child(dataSnapshot.getKey())
-                                        .setValue(dataSnapshot.getValue(), new DatabaseReference.CompletionListener() {
-                                    @Override
-                                    public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                    //Payment uploaded by user Already
+                    // Shake your ass ;)
+                    //Remove from main DB
+                    mainRef.child("Orders").child(order_ID)
+                            .removeValue(new DatabaseReference.CompletionListener() {
+                                @Override
+                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                                    Toast.makeText(getContext(), "Delivery Confirmed", Toast.LENGTH_SHORT).show();
+                                    hideProgressDialog();
+                                    active_models.remove(position);
+                                    activeCoAdapter.notifyItemRemoved(position);
+                                }
+                            });
+                } else {
 
-                                        //Move in drycleaner's DB
-                                        DatabaseReference dcRef = mainRef.child("Users").child("DryCleaners").child("0rYxL9Vp5yM3NrKs0upy0xz4S0D3");
+                    //Get Order Snapshot
+                    mainRef.child("Orders").child(active_models.get(position).getOrderID())
+                            .addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(@NonNull final DataSnapshot dataSnapshot) {
 
-                                        //Remove from collected branch
-                                        dcRef.child("CollectedOrders").child(dataSnapshot.child("CollectionStamp").getValue().toString().substring(0,8))
-                                                .child(dataSnapshot.getKey()).removeValue();
+                                    //Put snapshot in main history
+                                    mainRef.child("History").child("Orders").child(dataSnapshot.getKey())
+                                            .setValue(dataSnapshot.getValue(), new DatabaseReference.CompletionListener() {
+                                                @Override
+                                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
 
-                                        //Remove from Pending delivery branch
-                                        dcRef.child("PendingDeliveries").child(dataSnapshot.child("DeliveryStamp").getValue().toString().substring(0,8))
-                                                .child(dataSnapshot.getKey()).removeValue();
+                                                    // Put in DC's history
+                                                    dcDB.child("History").child("Orders").child(dataSnapshot.getKey()).child("TimeStamp")
+                                                            .setValue(dataSnapshot.child("DeliveryStamp").getValue().toString(), new DatabaseReference.CompletionListener() {
+                                                                @Override
+                                                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
 
-                                        //Add to history with delivery
-                                        dcRef.child("History").child(dataSnapshot.child("DeliveryStamp").getValue().toString().substring(0,8))
-                                                .child(dataSnapshot.getKey()).setValue(true, new DatabaseReference.CompletionListener() {
-                                            @Override
-                                            public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                                                                    //Put in customer's DB
+                                                                    DatabaseReference cusRef = mainRef.child("Users").child("Customers").child(dataSnapshot.child("UserID").getValue().toString());
+                                                                    cusRef.child("History").child("Orders").child(dataSnapshot.getKey()).child("TimeStamp")
+                                                                            .setValue(dataSnapshot.child("DeliveryStamp").getValue().toString(), new DatabaseReference.CompletionListener() {
+                                                                                @Override
+                                                                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
 
-                                                //Move in customer's DB
-                                                DatabaseReference cusRef = mainRef.child("Users").child("Customers").child(dataSnapshot.child("UserID").getValue().toString());
+                                                                                    //Remove from main DB
+                                                                                    mainRef.child("Orders").child(dataSnapshot.getKey())
+                                                                                            .removeValue(new DatabaseReference.CompletionListener() {
+                                                                                                @Override
+                                                                                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                                                                                                    Toast.makeText(getContext(), "Delivery Confirmed", Toast.LENGTH_SHORT).show();
+                                                                                                    hideProgressDialog();
+                                                                                                    active_models.remove(position);
+                                                                                                    activeCoAdapter.notifyItemRemoved(position);
+                                                                                                }
+                                                                                            });
+                                                                                }
+                                                                            });
+                                                                }
+                                                            });
+                                                }
+                                            });
+                                }
 
-                                                //Remove from order branch
-                                                cusRef.child("Orders").child(dataSnapshot.getKey()).removeValue();
+                                @Override
+                                public void onCancelled(@NonNull DatabaseError databaseError) {
 
-                                                //Add to customer history with delivery
-                                                cusRef.child("History").child(dataSnapshot.child("DeliveryStamp").getValue().toString().substring(0,8))
-                                                        .child(dataSnapshot.getKey()).setValue(true, new DatabaseReference.CompletionListener() {
-                                                    @Override
-                                                    public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
-
-                                                        //Remove from Active DB
-                                                        mainRef.child("Orders").child("Active").child(active_models.get(position).getOrderID())
-                                                                .removeValue(new DatabaseReference.CompletionListener() {
-                                                            @Override
-                                                            public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
-                                                                Toast.makeText(getContext(), "Delivery Confirmed", Toast.LENGTH_SHORT).show();
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-
-                            @Override
-                            public void onCancelled(@NonNull DatabaseError databaseError) {
-
-                            }
-                        });
+                                }
+                            });
+                }
             } else {
                 Toast.makeText(context, "Failed, Confirm Payment first", Toast.LENGTH_SHORT).show();
             }
-        }
-
-        private void makeCall(String getpNumber) {
-            Toast.makeText(context, "Calling " + getpNumber + "...", Toast.LENGTH_SHORT).show();
         }
 
         private void startDelivery(String add, final String orderID, final Button startButton, final int position) {
@@ -520,14 +533,8 @@ public class ActiveCoFrag extends DialogFragment {
                                         public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
                                             hideProgressDialog();
                                             Toast.makeText(context, "Successful update", Toast.LENGTH_SHORT).show();
-
-                                            startButton.setText("Confirm Delivery");
-                                            startButton.setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View v) {
-                                                    moveToHistory(position);
-                                                }
-                                            });
+                                            active_models.get(position).setProgress(3);
+                                            activeCoAdapter.notifyItemChanged(position);
                                         }
                                     });
                         }
@@ -542,9 +549,9 @@ public class ActiveCoFrag extends DialogFragment {
         }
 
         private void changeIfPaid(String title, String msg, final String child, final Switch paySwitch,
-                                  final String orderID, final String value, final int position, final Button startButton) {
-             paySwitch.setChecked(false);
-            AlertDialog alertDialog = new AlertDialog.Builder(context)
+                                  final String orderID, final String value, final int position) {
+            paySwitch.setChecked(false);
+            new AlertDialog.Builder(context)
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setTitle(title)
                     .setMessage(msg)
@@ -559,17 +566,8 @@ public class ActiveCoFrag extends DialogFragment {
                                         public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
                                             hideProgressDialog();
                                             Toast.makeText(context, "Successful update", Toast.LENGTH_SHORT).show();
-                                                paySwitch.setChecked(true);
-                                                paySwitch.setClickable(false);
-                                                active_models.get(position).setPayed(true);
-                                                //If button pressed
-                                            startButton.setText("Confirm Delivery");
-                                            startButton.setOnClickListener(new View.OnClickListener() {
-                                                @Override
-                                                public void onClick(View v) {
-                                                        moveToHistory(position);
-                                                }
-                                            });
+                                            active_models.get(position).setPayed(true);
+                                            activeCoAdapter.notifyItemChanged(position);
                                         }
                                     });
                         }
@@ -584,7 +582,7 @@ public class ActiveCoFrag extends DialogFragment {
                     .show();
         }
 
-        private void inputPrice(final String orderID) {
+        private void inputPrice(final String orderID, final int position) {
             LayoutInflater inflater = LayoutInflater.from(context);
             View dView = inflater.inflate(R.layout.edittext_dialog, null);
             final EditText dEditText = dView.findViewById(R.id.dialogEditText);
@@ -595,15 +593,17 @@ public class ActiveCoFrag extends DialogFragment {
                     .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialogInterface, int i) {
-                            //set what would happen when positive button is clicked
-                            showProgressDialog("Please wait", "Uploading data... do not cancel", (long) 50000);
+
+                            showProgressDialog("Please wait", "Uploading data... do not cancel", (long) 60000);
+                            final int addedPrice = Integer.valueOf(dEditText.getText().toString());
                             mainRef.child("Orders").child(orderID).child("Price")
-                                    .setValue(dEditText.getText().toString(), new DatabaseReference.CompletionListener() {
+                                    .setValue(addedPrice, new DatabaseReference.CompletionListener() {
                                         @Override
                                         public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
                                             hideProgressDialog();
                                             Toast.makeText(context, "Successful update", Toast.LENGTH_SHORT).show();
-                                            dismiss();
+                                            active_models.get(position).setPrice(addedPrice);
+                                            activeCoAdapter.notifyItemChanged(position);
                                         }
                                     });
                         }
@@ -662,6 +662,37 @@ public class ActiveCoFrag extends DialogFragment {
         @Override
         public int getItemCount() {
             return active_models.size();
+        }
+    }
+
+    private void makeCall(String getpNumber) {
+        try {
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.CALL_PHONE}, CALL_REQUEST);
+                    return;
+                }
+            }
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + getpNumber));
+            startActivity(callIntent);
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if(requestCode == CALL_REQUEST) {
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                makeCall(callNumber);
+            }
+            else {
+                Toast.makeText(context,"Permission denied!", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 

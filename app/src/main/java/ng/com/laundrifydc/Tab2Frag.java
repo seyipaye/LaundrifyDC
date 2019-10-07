@@ -2,6 +2,7 @@ package ng.com.laundrifydc;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -17,7 +18,6 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
@@ -33,20 +33,22 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import static androidx.constraintlayout.widget.Constraints.TAG;
+import static ng.com.laundrifydc.MainActivity.collectedModels;
 import static ng.com.laundrifydc.MainActivity.dcDB;
 import static ng.com.laundrifydc.MainActivity.gettingSnap;
-import static ng.com.laundrifydc.MainActivity.mainRef;
-import static ng.com.laundrifydc.MainActivity.mainSnap;
-import static ng.com.laundrifydc.MainActivity.orderDB;
+import static ng.com.laundrifydc.MainActivity.dcOrdersSnap;
+import static ng.com.laundrifydc.MainActivity.ordersRef;
+import static ng.com.laundrifydc.MainActivity.coRefreshed;
 
 public class Tab2Frag extends Fragment {
     Context context;
     RecyclerView.Adapter collectedAdapter;
-    List<Collected_Model> collectedModels;
     TextView descText;
     RecyclerView collectedRV;
     ProgressBar pBar;
-    String lastDayKey;
+    private final String TAG = "test";
+    private boolean updateDB;
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
@@ -57,38 +59,64 @@ public class Tab2Frag extends Fragment {
         descText = v.findViewById(R.id.descText);
         descText.setText("This shows all collected orders within the last seven days");
         collectedRV.setLayoutManager(new LinearLayoutManager(this.getActivity()));
-        collectedAdapter = new Tab2Frag.Collected_Adapter();
-        collectedModels = new ArrayList<>();
         collectedRV.setAdapter(collectedAdapter);
         pBar = v.findViewById(R.id.progressBar);
-        lastDayKey = null;
+        if (collectedModels.size() != 0) {
+            pBar.setVisibility(View.GONE);
+            collectedRV.setVisibility(View.VISIBLE);
+        }
+        Log.i(TAG, "onCreateView: Collected");
         return v;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        collectedAdapter = new Collected_Adapter();
+        collectedModels = new ArrayList<>();
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        if (mainSnap == null && !gettingSnap) {
-            getSnapAgain();
-        } else if (!(collectedModels.size() > 0)) {
-            feedData();
+
+    }
+
+    @Override
+    public void setUserVisibleHint(boolean visible)
+    {
+        super.setUserVisibleHint(visible);
+        if (visible && isResumed()) {
+            //Only manually call onResume if fragment is already visible
+            //Otherwise allow natural fragment lifecycle to call onResume
+            //onResume();
+
+            Log.i(TAG, "setUserVisibleHint: Resumed Collected");
+            if (dcOrdersSnap == null && !gettingSnap) {
+                getSnapAgain();
+            } else if (!(collectedModels.size() > 0)) {
+                feedData();
+            } else if (coRefreshed) {
+                feedData();
+            }
         }
     }
+
 
     //Get snap again from database
     private void getSnapAgain () {
         gettingSnap = true;
-        if (orderDB == null) {
-            orderDB = FirebaseDatabase.getInstance().getReference().child("Orders");
+        Log.i(TAG, "getSnapAgain: Collected");
+        if (ordersRef == null) {
+            ordersRef = FirebaseDatabase.getInstance().getReference().child("Orders");
         }
             showProgressDialog("", "Refreshing data...", (long) 50000);
-            orderDB = mainRef.child("Orders");
-            orderDB.addListenerForSingleValueEvent(new ValueEventListener() {
+            dcDB.child("Orders").addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                     if (dataSnapshot.exists()) {
                         gettingSnap = false;
-                        mainSnap = dataSnapshot;
+                        dcOrdersSnap = dataSnapshot;
                         feedData();
                         Toast.makeText(context, "Data fetched", Toast.LENGTH_SHORT).show();
                         hideProgressDialog();
@@ -103,9 +131,9 @@ public class Tab2Frag extends Fragment {
     }
 
     private void feedData() {
+        Log.i(TAG, "feedData: Collected");
 
         //Get Last 7 days Keys + today
-        ArrayList<TwoStringsModel> twoStringsModels = new ArrayList<>();
         for (int i = 0; i > -8; i--) {
             Date date;
             Calendar cal = Calendar.getInstance();
@@ -114,7 +142,7 @@ public class Tab2Frag extends Fragment {
 
             final String dayKey = new SimpleDateFormat("yyyyMMdd").format(date);
             final String dayDay = new SimpleDateFormat("EEEE").format(date);
-            final String dayMonth = new SimpleDateFormat("MMMM").format(date);
+            final String dayMonth = new SimpleDateFormat("MMM").format(date);
             String dayNumber = (new SimpleDateFormat("dd").format(date));
             String addition;
             final String dayString;
@@ -141,66 +169,59 @@ public class Tab2Frag extends Fragment {
                 dayString = dayDay + " " + dayNumber + addition + dayMonth;
             }
 
-            final Query dateRef = dcDB.child("Orders").child("Collected").child(dayKey).orderByChild("TimeStamp");
-            dateRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                    final String count = String.valueOf(dataSnapshot.getChildrenCount());
-                    final ArrayList<String> keys = new ArrayList<>();
-                    for (DataSnapshot child : dataSnapshot.getChildren()) {
-                        keys.add(child.getKey());
-                    }
-                    collectedModels.add(new Collected_Model(dayString, count, keys, dayKey));
-                    collectedAdapter.notifyDataSetChanged();
-                    pBar.setVisibility(View.GONE);
-                    collectedRV.setVisibility(View.VISIBLE);
-                    if (dayKey == lastDayKey) {
-                        cleanDB(lastDayKey);
-                    }
-                }
 
-                @Override
-                public void onCancelled(@NonNull DatabaseError databaseError) {
-                }
-            });
-            
+            // Database Stuffs
+            final DataSnapshot dateRef = dcOrdersSnap.child("Collected").child(dayKey);
+            final String count = String.valueOf(dateRef.getChildrenCount());
+            final ArrayList<String> keys = new ArrayList<>();
+            for (DataSnapshot child : dateRef.getChildren()) {
+                keys.add(child.getKey());
+            }
+            if (i == 0) {
+                collectedModels.clear();
+            }
+            collectedModels.add(new Collected_Model(dayString, count, keys, dayKey));
+            collectedAdapter.notifyDataSetChanged();
+            pBar.setVisibility(View.GONE);
+            collectedRV.setVisibility(View.VISIBLE);
+
+            // Inform if refreshed
+            if (collectedModels.size() == 7 && coRefreshed) {
+                coRefreshed = false;
+            }
+
+            // Clean DB when finished
             if (i == -7) {
-                lastDayKey = dayKey;
-                //Log.i("test", "deleting...");
+                Log.i(TAG, "feedData: Last day is " + dayKey);
+                cleanDB(dayKey);
             }
         }
     }
 
     private void cleanDB (final String lastDate) {
-        dcDB.child("Orders").child("Collected").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                for (final DataSnapshot day : dataSnapshot.getChildren()) {
-                    //Log.i("test","Found " + child.getKey());
-                    if (Integer.parseInt(day.getKey()) < Integer.parseInt(lastDate)) {
-                        //Log.i("test", "moving... " + child.getKey());
-                        for (final DataSnapshot orders : day.getChildren()) {
-                            dcDB.child("Orders").child("Incomplete").child(orders.getKey()).setValue(orders.getValue(), new DatabaseReference.CompletionListener() {
-                                @Override
-                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
-                                    dcDB.child("Orders").child("Collected").child(day.getKey()).child(orders.getKey()).removeValue();
-                                }
-                            });
+        // Get all collected keys
+        final DataSnapshot collectedSnap = dcOrdersSnap.child("Collected");
+        for (final DataSnapshot day : collectedSnap.getChildren()) {
 
+            // Check if in sync
+            if (Integer.parseInt(day.getKey()) < Integer.parseInt(lastDate)) {
+                Log.i(TAG, "cleanDB: removed " + day.getKey());
+                for (final DataSnapshot orders : day.getChildren()) {
+                    dcDB.child("Orders").child("Incomplete").child(orders.getKey()).setValue(orders.getValue(), new DatabaseReference.CompletionListener() {
+                        @Override
+                        public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                            dcDB.child("Orders").child("Collected").child(day.getKey()).child(orders.getKey()).removeValue();
                         }
-                    }
+                    });
+
                 }
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-
-            }
-        });
+        }
     }
 
     private void moveOrders(String orderKey, Object value) {
-        orderDB.child(orderKey).addListenerForSingleValueEvent(new ValueEventListener() {
+        //// Todo handle change in delivery and pickup time
+        ordersRef.child(orderKey).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
             }
@@ -250,8 +271,19 @@ public class Tab2Frag extends Fragment {
                 @Override
                 public void onClick(View v) {
                     DialogFragment newFrag = ActiveCoFrag.newInstance(collectedModels.get(position).getKeys(),
-                            collectedModels.get(position).getDataDay());
+                            collectedModels.get(position).getDataDay(), collectedModels.get(position).getTotal());
                     newFrag.show(getFragmentManager(), "tag");
+                    newFrag.onCancel(new DialogInterface() {
+                        @Override
+                        public void cancel() {
+                            Toast.makeText(context, "Canceled", Toast.LENGTH_SHORT).show();
+                        }
+
+                        @Override
+                        public void dismiss() {
+                            Toast.makeText(context, "Dismissed", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 }
             });
         }

@@ -3,9 +3,10 @@ package ng.com.laundrifydc;
 public class Pending_Model {
 
     String orderName, details, id, coTime, coAdd, note, number, collectionStamp, deliveryStamp;
+    private boolean weeklyPickup;
 
-    public Pending_Model (String orderName, String details, String id, String coTime, String coAdd, String note, String number,
-                          String collectionStamp, String deliveryStamp) {
+    public Pending_Model(String orderName, String details, String id, String coTime, String coAdd, String note, String number,
+                         String collectionStamp, String deliveryStamp, boolean weeklyPickup) {
         this.orderName = orderName;
         this.details = details;
         this.id = id;
@@ -15,6 +16,7 @@ public class Pending_Model {
         this.number = number;
         this.collectionStamp = collectionStamp;
         this.deliveryStamp = deliveryStamp;
+        this.weeklyPickup = weeklyPickup;
     }
 
     public String getOrderName() {
@@ -87,5 +89,13 @@ public class Pending_Model {
 
     public void setDeliveryStamp(String deliveryStamp) {
         this.deliveryStamp = deliveryStamp;
+    }
+
+    public boolean isWeeklyPickup() {
+        return weeklyPickup;
+    }
+
+    public void setWeeklyPickup(boolean weeklyPickup) {
+        this.weeklyPickup = weeklyPickup;
     }
 }

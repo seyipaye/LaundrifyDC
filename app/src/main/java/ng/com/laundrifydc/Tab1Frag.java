@@ -2,8 +2,10 @@ package ng.com.laundrifydc;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -28,24 +30,28 @@ import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import static ng.com.laundrifydc.MainActivity.dcDB;
-import static ng.com.laundrifydc.MainActivity.mainRef;
-import static ng.com.laundrifydc.MainActivity.orderDB;
+import static ng.com.laundrifydc.MainActivity.gettingSnap;
+import static ng.com.laundrifydc.MainActivity.dcOrdersSnap;
+import static ng.com.laundrifydc.MainActivity.ordersRef;
 
 public class Tab1Frag extends Fragment {
     Context context;
     RecyclerView.Adapter pendingAdapter;
     List<Pending_Model> pending_models;
+    List<String> incompleteKeys;
     private final int CALL_REQUEST = 100;
     private String callNumber;
     TextView noOrder;
@@ -54,6 +60,13 @@ public class Tab1Frag extends Fragment {
     DatabaseReference dcPendingOrdersDB;
     boolean gettingKeys;
     boolean gettingData;
+
+    // TODO Calculation of monthly wages
+    // TODO Improve Payment infrastructure
+    // TODO Put payment key in order
+    // TODO WEEKLY PICKUP
+    // TODO Notifications
+
 
     @Nullable
     @Override
@@ -74,6 +87,7 @@ public class Tab1Frag extends Fragment {
 
         gettingKeys = false;
         gettingData = false;
+        Log.i("test", String.valueOf(R.drawable.ic_local_laundry_service_black_24dp));
         return v;
     }
 
@@ -90,8 +104,8 @@ public class Tab1Frag extends Fragment {
     //inteferes when deleting at the sametime requesting data
     private void getKeys() {
         gettingKeys = true;
-        if (orderDB == null) {
-            orderDB = FirebaseDatabase.getInstance().getReference().child("Orders");
+        if (ordersRef == null) {
+            ordersRef = FirebaseDatabase.getInstance().getReference().child("Orders");
         }
         Log.i("test", "getting Keys");
         dcPendingOrdersDB = dcDB.child("Orders").child("Pending");
@@ -99,22 +113,24 @@ public class Tab1Frag extends Fragment {
         pendingQuery.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists() && dataSnapshot != null) {
+                if (dataSnapshot.exists()) {
+
+                    Log.i("test", "Pending get " + dataSnapshot.getValue());
                     if (!gettingData) {
                         Log.i("test", "getting Data");
-                        int childNumber = 0;
+                        ArrayList<String> pendingKeys = new ArrayList<>();
                         for (DataSnapshot dataChild : dataSnapshot.getChildren()) {
-                            childNumber ++;
-                            getData(dataChild.getKey(), childNumber, dataSnapshot.getChildrenCount());
-                            Log.i("test", dataChild.getValue().toString() + "thiss");
+                            pendingKeys.add(dataChild.getKey());
                         }
+                        getData(pendingKeys);
                     }
                 } else {
                     noOrder.setVisibility(View.VISIBLE);
                     pBar.setVisibility(View.GONE);
                     pendingRC.setVisibility(View.GONE);
                     gettingKeys = false;
-                    Log.i("test", "Nothing");
+                    Log.i("test", "No pending order");
+                    checkForIncompleteOrder();
                 }
             }
             @Override
@@ -126,36 +142,39 @@ public class Tab1Frag extends Fragment {
         });
     }
 
-    private void getData(final String key, final int childNumber, final long childrenCount) {
-        orderDB.child(key).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                        Map dataMap = (Map<String, Object>) dataSnapshot.getValue();
+    private void getData(ArrayList<String> pendingKeys) {
+        pending_models.clear();
+        for (Iterator<String> it = pendingKeys.iterator(); it.hasNext(); ) {
+            final String thiskey = it.next();
+            final boolean thisNextable = it.hasNext();
+
+            ordersRef.child(thiskey).addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        Map dataMap = (Map) dataSnapshot.getValue();
 
                         //If it's Pending
                         if (String.valueOf(dataMap.get("Progress")).matches("0")) {
                             String details;
                             if (String.valueOf(dataMap.get("Fragrance")).matches("true")) {
-                                details = "Fragranced Laundry | " + String.valueOf(dataMap.get("Vehicle")) + " Pickup";
+                                details = "Fragranced Laundry | " + (dataMap.get("Vehicle")) + " Pickup";
                             } else {
-                                details = "No Fragrance needed | " + String.valueOf(dataMap.get("Vehicle")) + " Pickup";
+                                details = "No Fragrance needed | " + (dataMap.get("Vehicle")) + " Pickup";
                             }
-                            String name = String.valueOf(dataMap.
-                                    get("FirstName")) + " " + String.valueOf(dataMap.get("LastName"));
+                            String name = (dataMap.get("FirstName")) + " " + (dataMap.get("LastName"));
 
-                            if (childNumber == 1) {
-                                pending_models.clear();
-                            }
-                            if (childNumber == childrenCount) {
+                            if (!thisNextable) {
                                 gettingData = false;
                                 gettingKeys = false;
+                                checkForIncompleteOrder();
                             }
-                            pending_models.add(new Pending_Model(name , details,
+                            pending_models.add(new Pending_Model(name, details,
                                     dataSnapshot.getKey(), String.valueOf(dataMap.get("CollectionTime")),
                                     String.valueOf(dataMap.get("PickupAddress")), String.valueOf(dataMap
                                     .get("Note")), String.valueOf(dataMap.get("PhoneNumber")),
-                                    String.valueOf(dataMap.get("CollectionStamp")), String.valueOf(dataMap.get("DeliveryStamp"))));
+                                    String.valueOf(dataMap.get("CollectionStamp")), String.valueOf(dataMap.get("DeliveryStamp")),
+                                    chgB(dataMap.get("WeeklyPickup"))));
 
                             pendingAdapter.notifyDataSetChanged();
                             pBar.setVisibility(View.GONE);
@@ -164,14 +183,61 @@ public class Tab1Frag extends Fragment {
                             hideProgressDialog();
                             Log.i("test", "Converted pending orders !!!");
                         } else {
-                            dcPendingOrdersDB.child(key).removeValue();
+                            dcDB.child("Orders").child("Pending").child(thiskey).child("TimeStamp").removeValue();
+                            Log.i("test", "removing not pending " + thiskey + ".");
+                            if (!thisNextable) {
+                                gettingData = false;
+                                gettingKeys = false;
+                                checkForIncompleteOrder();
+                            }
                         }
 
+                    } else {
+                        dcDB.child("Orders").child("Pending").child(thiskey).removeValue();
+                        Log.i("test", "removing not found " + thiskey);
+                        if (!thisNextable) {
+                            gettingData = false;
+                            gettingKeys = false;
+                            checkForIncompleteOrder();
+                        }
+                    }
+
+                    if (pending_models.size() == 0) {
+                        noOrder.setVisibility(View.VISIBLE);
+                        pendingRC.setVisibility(View.GONE);
+                        pBar.setVisibility(View.GONE);
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    noOrder.setVisibility(View.GONE);
+                    pendingRC.setVisibility(View.GONE);
+                    pBar.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+    }
+
+    private void checkForIncompleteOrder() {
+        incompleteKeys = new ArrayList<>();
+        Query incompleteQuery = dcDB.child("Orders").child("Incomplete").orderByChild("TimeStamp");
+        incompleteQuery.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Log.i("test", "Checking for Incomplete");
+                    for (DataSnapshot dataChild : dataSnapshot.getChildren()) {
+                        incompleteKeys.add(dataChild.getKey());
+                        //Log.i("test", dataChild.getValue().toString() + "...Incomplete");
+                    }
+                    askToComplete(incompleteKeys);
                 } else {
-                   dcPendingOrdersDB.child(key).removeValue();
+
+                    //Do nothing
+                    Log.i("test", "No incomplete order");
                 }
             }
-
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
                 noOrder.setVisibility(View.GONE);
@@ -179,6 +245,32 @@ public class Tab1Frag extends Fragment {
                 pBar.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    private void askToComplete(final List<String> incompleteKeys) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.IncompleteDialog);
+        builder.setIcon(android.R.drawable.ic_dialog_alert);
+        builder.setTitle("Incomplete Orders");
+        builder.setMessage("You have " + incompleteKeys.size() + " incomplete orders, please ensure you \"CONFIRM\" deliveries payments to " +
+                " prevent this from showing again.")
+                .setPositiveButton("Sort", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        DialogFragment newFrag = IncompleteFrag.newInstance(incompleteKeys);
+                        newFrag.show(getFragmentManager(), "tag");
+                    }})
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+
+                    }});
+
+        final AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private boolean chgB(Object obj) {
+        return Boolean.valueOf(String.valueOf(obj));
     }
 
     private class Pending_Adapter extends RecyclerView.Adapter<Pending_Adapter.MyViewHolder> {
@@ -194,6 +286,7 @@ public class Tab1Frag extends Fragment {
             TextView notes;
             TextView notesHead;
             TextView pNumber;
+            TextView weeklyPFloat;
             ImageView orderDp;
             Button button1;
             Button button2;
@@ -209,6 +302,7 @@ public class Tab1Frag extends Fragment {
                 this.notes = itemView.findViewById(R.id.notes);
                 this.notesHead = itemView.findViewById(R.id.notesHeader);
                 this.pNumber = itemView.findViewById(R.id.pNumber);
+                this.weeklyPFloat = itemView.findViewById(R.id.weeklyPFloat);
                 this.orderDp = itemView.findViewById(R.id.orderDp);
                 this.button1 = itemView.findViewById(R.id.button1);
                 this.button2 = itemView.findViewById(R.id.button2);
@@ -234,6 +328,7 @@ public class Tab1Frag extends Fragment {
             TextView notes = holder.notes;
             TextView notesHeader = holder.notesHead;
             TextView pNumber = holder.pNumber;
+            TextView weeklyPFloat = holder.weeklyPFloat;
             ImageView orderDp = holder.orderDp;
             Button button1 = holder.button1;
             Button button2 = holder.button2;
@@ -251,13 +346,15 @@ public class Tab1Frag extends Fragment {
             orderDp.setImageResource(R.drawable.ic_contacts_black_24dp);
             final String collectionStamp = pending_models.get(position).getCollectionStamp();
             final String deliveryStamp = pending_models.get(position).getDeliveryStamp();
+            final boolean isWeekly = pending_models.get(position).isWeeklyPickup();
 
+            // Notes
             if (pending_models.get(position).getNote().matches("")) {
                 notesHeader.setVisibility(View.GONE);
                 notes.setVisibility(View.GONE);
             }
 
-            //Call shitt
+            // Call stuff
             String toNumber = pending_models.get(position).getNumber();
             pNumber.setText("Phone no. :" + toNumber);
 
@@ -273,72 +370,91 @@ public class Tab1Frag extends Fragment {
                 }
             });
 
+            // Accept button
             button2.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     showProgressDialog("", "Accepting Order", (long) 10000);
+
+                    //Add to DC's Collected
                     dcDB.child("Orders").child("Collected").child(collectionStamp.substring(0, 8))
-                            .child(order_ID).child("TimeStamp").setValue(collectionStamp);
-                    dcDB.child("Orders").child("Delivery").child(deliveryStamp.substring(0, 8))
-                            .child(order_ID).child("TimeStamp").setValue(deliveryStamp);
-                    orderDB.child(order_ID).child("Progress").setValue("1", new DatabaseReference.CompletionListener() {
+                            .child(order_ID).child("TimeStamp").setValue(collectionStamp, new DatabaseReference.CompletionListener() {
                         @Override
                         public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
-                            hideProgressDialog();
-                            Toast.makeText(context, "Order " + order_ID + " accepted.", Toast.LENGTH_SHORT).show();
-                            pending_models.remove(position);
-                            pendingAdapter.notifyDataSetChanged();
+
+                            //Add to DC's Delivery
+                            dcDB.child("Orders").child("Delivery").child(deliveryStamp.substring(0, 8))
+                                    .child(order_ID).child("TimeStamp").setValue(deliveryStamp, new DatabaseReference.CompletionListener() {
+                                @Override
+                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+
+                                    //Change Progress to Accepted
+                                    ordersRef.child(order_ID).child("Progress").setValue("1", new DatabaseReference.CompletionListener() {
+                                        @Override
+                                        public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+
+                                            dcPendingOrdersDB.child(order_ID).removeValue(new DatabaseReference.CompletionListener() {
+                                                @Override
+                                                public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+                                                    hideProgressDialog();
+                                                    Toast.makeText(context, "Order " + order_ID + " accepted.", Toast.LENGTH_SHORT).show();
+                                                    pending_models.remove(position);
+                                                    pendingAdapter.notifyDataSetChanged();
+                                                    if (pending_models.size() == 0) {
+                                                        noOrder.setVisibility(View.VISIBLE);
+                                                        pendingRC.setVisibility(View.GONE);
+                                                        pBar.setVisibility(View.GONE);
+                                                    }
+                                                    refreshDB();
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
                         }
                     });
+
+
                 }
             });
 
+            // Decline button
             button3.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     showProgressDialog("", "Cancelling Order", (long) 10000);
-                    orderDB.child(order_ID).removeValue(new DatabaseReference.CompletionListener() {
+                    ordersRef.child(order_ID).removeValue(new DatabaseReference.CompletionListener() {
                         @Override
                         public void onComplete(@Nullable DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
+
                             //It will remove itself if it dosen't find itself in the DB
                             hideProgressDialog();
                             Toast.makeText(context, "Order " + order_ID + " declined.", Toast.LENGTH_SHORT).show();
                             pending_models.remove(position);
                             pendingAdapter.notifyDataSetChanged();
+                            if (pending_models.size() == 0) {
+                                noOrder.setVisibility(View.VISIBLE);
+                                pendingRC.setVisibility(View.GONE);
+                                pBar.setVisibility(View.GONE);
+                            }
                         }
                     });
                 }
             });
-        /*
-        orderText.setText(ordersSnap.get(position).getKey());
-        isClosed[0] = true;
-        orderText.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black_24dp, 0);
 
-        orderText.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isClosed[0]) {
-                    if (date_models.isEmpty()) {
-                        //date model consist of Day:Time:OrderId
-                        for (DataSnapshot child : ordersSnap.get(position).getChildren()) {
-                            date_models.add(new DateModel(child.getKey(), child.getValue().toString(), ordersSnap.get(position).getKey()));
-                        }
-                    }
-
-                    mapRecycler.setLayoutManager(new LinearLayoutManager(context));
-                    mapRecycler.setVisibility(View.VISIBLE);
-                    mapRecycler.setAdapter(new MapEditAdapter(date_models));
-                    isClosed[0] = false;
-                    orderText.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_up_black_24dp, 0);
-                } else {
-                    orderText.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black_24dp, 0);
-                    mapRecycler.setVisibility(View.GONE);
-                    isClosed[0] = true;
-                }
-
+            // Show Weekly pickup floater
+            if (order_ID.contains("SP-")) {
+                weeklyPFloat.setText("Scheduled Pickup");
+                weeklyPFloat.setVisibility(View.VISIBLE);
+            } else if (isWeekly) {
+                weeklyPFloat.setText("Weekly Pickup");
+                weeklyPFloat.setVisibility(View.VISIBLE);
+            } else {
+                weeklyPFloat.setVisibility(View.GONE);
             }
-        });
-        */
+
+
         }
 
         @Override
@@ -347,16 +463,10 @@ public class Tab1Frag extends Fragment {
         }
     }
 
-    /**
-     * This method is responsible make a call and also
-     * checking run time permissions for CALL_PHONE
-     *
-     * @param finalToNumber*/
     public void callPhoneNumber(String finalToNumber) {
         try {
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
                     ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.CALL_PHONE}, CALL_REQUEST);
                     return;
                 }
@@ -381,6 +491,32 @@ public class Tab1Frag extends Fragment {
                 Toast.makeText(context,"Permission denied!", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    //Get snap again from database
+    private void refreshDB() {
+        gettingSnap = true;
+        showProgressDialog("", "Refreshing data...", (long) 50000);
+        if (ordersRef == null) {
+            ordersRef = FirebaseDatabase.getInstance().getReference().child("Orders");
+        }
+        dcDB.child("Orders").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    gettingSnap = false;
+                    dcOrdersSnap = dataSnapshot;
+                    MainActivity.coRefreshed = true;
+                    MainActivity.deRefreshed = true;
+                    hideProgressDialog();
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                hideProgressDialog();
+                Toast.makeText(context, "Couldn't fetch data", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     //Progress dialog
